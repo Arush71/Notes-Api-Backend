@@ -16,7 +16,7 @@ const createNewNote = `-- name: CreateNewNote :one
 
 Insert into notes (title, content , updated_at)
 Values ($1,$2 , NOW())
-Returning id, title, content, created_at, updated_at
+Returning id, title, content, created_at, updated_at, owner_id
 `
 
 type CreateNewNoteParams struct {
@@ -33,6 +33,7 @@ func (q *Queries) CreateNewNote(ctx context.Context, arg CreateNewNoteParams) (N
 		&i.Content,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OwnerID,
 	)
 	return i, err
 }
@@ -40,7 +41,7 @@ func (q *Queries) CreateNewNote(ctx context.Context, arg CreateNewNoteParams) (N
 const deleteNote = `-- name: DeleteNote :one
 Delete from notes
 where id = $1
-returning id, title, content, created_at, updated_at
+returning id, title, content, created_at, updated_at, owner_id
 `
 
 func (q *Queries) DeleteNote(ctx context.Context, id uuid.UUID) (Note, error) {
@@ -52,6 +53,7 @@ func (q *Queries) DeleteNote(ctx context.Context, id uuid.UUID) (Note, error) {
 		&i.Content,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OwnerID,
 	)
 	return i, err
 }
@@ -139,7 +141,7 @@ Set
     content = $3,
     updated_at = NOW()
 where id = $1
-returning id, title, content, created_at, updated_at
+returning id, title, content, created_at, updated_at, owner_id
 `
 
 type UpdateNoteParams struct {
@@ -157,6 +159,7 @@ func (q *Queries) UpdateNote(ctx context.Context, arg UpdateNoteParams) (Note, e
 		&i.Content,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OwnerID,
 	)
 	return i, err
 }

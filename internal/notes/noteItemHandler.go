@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"notes-api/internal/db"
+	"notes-api/internal/helpers"
 
 	"github.com/google/uuid"
 )
@@ -13,25 +14,29 @@ func (s *Service) GetNoteHandler(w http.ResponseWriter, r *http.Request, id uuid
 	note, err := s.Q.GetANote(r.Context(), id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			writeError(w, http.StatusNotFound, "couldn't find a note of that id.")
+			helpers.WriteError(w, http.StatusNotFound, helpers.ErrorResponse{
+				Error: "couldn't find a note of that id.",
+			})
 			return
 		}
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
-	WriteJson(w, http.StatusOK, note)
+	helpers.WriteJson(w, http.StatusOK, note)
 }
 func (s *Service) DeleteNoteHandler(w http.ResponseWriter, r *http.Request, id uuid.UUID) {
 	note, err := s.Q.DeleteNote(r.Context(), id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			writeError(w, http.StatusNotFound, "couldn't find a note of that id.")
+			helpers.WriteError(w, http.StatusNotFound, helpers.ErrorResponse{
+				Error: "couldn't find a note of that id.",
+			})
 			return
 		}
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
-	WriteJson(w, http.StatusOK, note)
+	helpers.WriteJson(w, http.StatusOK, note)
 }
 func (s *Service) UpdateNoteHandler(w http.ResponseWriter, r *http.Request, id uuid.UUID) {
 	type reqT struct {
@@ -39,12 +44,16 @@ func (s *Service) UpdateNoteHandler(w http.ResponseWriter, r *http.Request, id u
 		Content *string `json:"content"`
 	}
 	var req reqT
-	if er := ReadJson(r, &req); er != nil {
-		writeError(w, http.StatusBadRequest, "bad request")
+	if er := helpers.ReadJson(r, &req); er != nil {
+		helpers.WriteError(w, http.StatusBadRequest, helpers.ErrorResponse{
+			Error: "bad request",
+		})
 		return
 	}
 	if req.Content == nil || req.Title == nil {
-		writeError(w, http.StatusBadRequest, "both content and id should be provided.")
+		helpers.WriteError(w, http.StatusBadRequest, helpers.ErrorResponse{
+			Error: "both content and id should be provided.",
+		})
 		return
 	}
 	note, err := s.Q.UpdateNote(r.Context(), db.UpdateNoteParams{
@@ -54,11 +63,13 @@ func (s *Service) UpdateNoteHandler(w http.ResponseWriter, r *http.Request, id u
 	})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			writeError(w, http.StatusNotFound, "couldn't find a note of that id.")
+			helpers.WriteError(w, http.StatusNotFound, helpers.ErrorResponse{
+				Error: "couldn't find a note of that id.",
+			})
 			return
 		}
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
-	WriteJson(w, http.StatusOK, note)
+	helpers.WriteJson(w, http.StatusOK, note)
 }

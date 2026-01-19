@@ -12,29 +12,30 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func setupDB() *db.Queries {
+func setupDB() (*db.Queries, string) {
 	dbUrl := os.Getenv("DB_URL")
+	tokenString := os.Getenv("TOKEN_SECRET")
 	database, err := sql.Open("postgres", dbUrl)
 	if err != nil {
 		log.Fatal(err)
 	}
 	dbQuery := db.New(database)
-	return dbQuery
+	return dbQuery, tokenString
 }
 
 func main() {
 	godotenv.Load()
-	dbQuery := setupDB()
+	dbQuery, tokenSecret := setupDB()
 	notesService := &notes.Service{
-		Q: dbQuery,
+		Q:           dbQuery,
+		TokenSecret: tokenSecret,
 	}
 	mux := http.NewServeMux()
 	server := http.Server{
 		Addr:    ":5027",
 		Handler: mux,
 	}
-	mux.HandleFunc("/app/notes", notesService.NotesCollectionHandler)
-	mux.HandleFunc("/app/notes/{id}", notesService.NoteItemHandler)
+	registerRouter(mux, notesService)
 	println("Server started...")
 	server.ListenAndServe()
 

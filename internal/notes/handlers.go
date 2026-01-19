@@ -2,6 +2,7 @@ package notes
 
 import (
 	"net/http"
+	"notes-api/internal/helpers"
 	"strings"
 
 	"github.com/google/uuid"
@@ -34,5 +35,23 @@ func (s *Service) NoteItemHandler(w http.ResponseWriter, r *http.Request) {
 		s.UpdateNoteHandler(w, r, uuid_id)
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (s *Service) AuthRouteHandler(w http.ResponseWriter, r *http.Request) {
+	reqPath := strings.TrimPrefix(r.URL.Path, "/app/auth/")
+	switch {
+	case reqPath == "login" && http.MethodPost == r.Method:
+		s.LoginHandler(w, r)
+	case reqPath == "register" && http.MethodPost == r.Method:
+		s.RegisterHandler(w, r)
+	case reqPath != "register" && reqPath != "login":
+		helpers.WriteError(w, http.StatusNotFound, helpers.ErrorResponse{
+			Error: "route not found",
+		})
+	default:
+		helpers.WriteError(w, http.StatusMethodNotAllowed, helpers.ErrorResponse{
+			Error: "method not allowed",
+		})
 	}
 }
