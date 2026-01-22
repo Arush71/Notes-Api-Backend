@@ -4,14 +4,15 @@ Select
      id ,
     title,
     content,
-    updated_at
-From notes;
+    updated_at,
+    owner_id
+From notes where owner_id = $1;
 
 -- name: CreateNewNote :one
 
-Insert into notes (title, content , updated_at)
-Values ($1,$2 , NOW())
-Returning *;
+Insert into notes (title, content , updated_at , owner_id)
+Values ($1,$2 , NOW() , $3)
+Returning owner_id , id , created_at;
 
 -- name: GetANote :one
 
@@ -20,13 +21,14 @@ Select
     title,
     content,
     updated_at
+    owner_id
   from notes
-where id = $1;
+where id = $1 and owner_id = $2;
 
 -- name: DeleteNote :one
 Delete from notes
-where id = $1
-returning *;
+where id = $1 and owner_id = $2 
+returning id;
 
 -- name: UpdateNote :one
 
@@ -35,5 +37,5 @@ Set
     title = $2,
     content = $3,
     updated_at = NOW()
-where id = $1
+where id = $1 and owner_id = $4
 returning *;

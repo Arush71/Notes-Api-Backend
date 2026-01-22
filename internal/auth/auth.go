@@ -1,6 +1,9 @@
 package auth
 
 import (
+	"fmt"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/alexedwards/argon2id"
@@ -36,4 +39,31 @@ func MakeJWT(userId uuid.UUID, tokenSecret string, expiresIn time.Duration) (str
 		return "", err
 	}
 	return token_str, nil
+}
+
+func ValidateJWT(access_token string, tokenSecret string) (uuid.UUID, error) {
+	claims := &jwt.RegisteredClaims{}
+	token, err := jwt.ParseWithClaims(access_token, claims, func(t *jwt.Token) (any, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+		}
+		return []byte(tokenSecret), nil
+	})
+	if err != nil || !token.Valid {
+		return uuid.UUID{}, err
+	}
+	id, err := uuid.Parse(claims.Subject)
+	if err != nil {
+		return uuid.UUID{}, err
+	}
+	return id, nil
+}
+
+func GetBearerToken(header http.Header) (string, error) {
+	auth_header := header.Get("Authorization")
+	auth_header_arr := strings.Fields(auth_header)
+	if len(auth_header_arr) != 2 || auth_header_arr[0] != "Bearer" {
+		return "", fmt.Errorf("Invalid auth header")
+	}
+	return auth_header_arr[1], nil
 }

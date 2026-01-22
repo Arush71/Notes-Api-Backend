@@ -31,11 +31,11 @@ func main() {
 		TokenSecret: tokenSecret,
 	}
 	mux := http.NewServeMux()
+	registerRouter(mux, notesService)
 	server := http.Server{
 		Addr:    ":5027",
 		Handler: mux,
 	}
-	registerRouter(mux, notesService)
 	println("Server started...")
 	server.ListenAndServe()
 

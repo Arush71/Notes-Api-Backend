@@ -14,48 +14,46 @@ import (
 
 const createNewNote = `-- name: CreateNewNote :one
 
-Insert into notes (title, content , updated_at)
-Values ($1,$2 , NOW())
-Returning id, title, content, created_at, updated_at, owner_id
+Insert into notes (title, content , updated_at , owner_id)
+Values ($1,$2 , NOW() , $3)
+Returning owner_id , id , created_at
 `
 
 type CreateNewNoteParams struct {
 	Title   string
 	Content string
+	OwnerID uuid.UUID
 }
 
-func (q *Queries) CreateNewNote(ctx context.Context, arg CreateNewNoteParams) (Note, error) {
-	row := q.db.QueryRowContext(ctx, createNewNote, arg.Title, arg.Content)
-	var i Note
-	err := row.Scan(
-		&i.ID,
-		&i.Title,
-		&i.Content,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.OwnerID,
-	)
+type CreateNewNoteRow struct {
+	OwnerID   uuid.UUID
+	ID        uuid.UUID
+	CreatedAt time.Time
+}
+
+func (q *Queries) CreateNewNote(ctx context.Context, arg CreateNewNoteParams) (CreateNewNoteRow, error) {
+	row := q.db.QueryRowContext(ctx, createNewNote, arg.Title, arg.Content, arg.OwnerID)
+	var i CreateNewNoteRow
+	err := row.Scan(&i.OwnerID, &i.ID, &i.CreatedAt)
 	return i, err
 }
 
 const deleteNote = `-- name: DeleteNote :one
 Delete from notes
-where id = $1
-returning id, title, content, created_at, updated_at, owner_id
+where id = $1 and owner_id = $2 
+returning id
 `
 
-func (q *Queries) DeleteNote(ctx context.Context, id uuid.UUID) (Note, error) {
-	row := q.db.QueryRowContext(ctx, deleteNote, id)
-	var i Note
-	err := row.Scan(
-		&i.ID,
-		&i.Title,
-		&i.Content,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.OwnerID,
-	)
-	return i, err
+type DeleteNoteParams struct {
+	ID      uuid.UUID
+	OwnerID uuid.UUID
+}
+
+func (q *Queries) DeleteNote(ctx context.Context, arg DeleteNoteParams) (uuid.UUID, error) {
+	row := q.db.QueryRowContext(ctx, deleteNote, arg.ID, arg.OwnerID)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
 }
 
 const getANote = `-- name: GetANote :one
@@ -65,25 +63,31 @@ Select
     title,
     content,
     updated_at
+    owner_id
   from notes
-where id = $1
+where id = $1 and owner_id = $2
 `
 
-type GetANoteRow struct {
-	ID        uuid.UUID
-	Title     string
-	Content   string
-	UpdatedAt time.Time
+type GetANoteParams struct {
+	ID      uuid.UUID
+	OwnerID uuid.UUID
 }
 
-func (q *Queries) GetANote(ctx context.Context, id uuid.UUID) (GetANoteRow, error) {
-	row := q.db.QueryRowContext(ctx, getANote, id)
+type GetANoteRow struct {
+	ID      uuid.UUID
+	Title   string
+	Content string
+	OwnerID time.Time
+}
+
+func (q *Queries) GetANote(ctx context.Context, arg GetANoteParams) (GetANoteRow, error) {
+	row := q.db.QueryRowContext(ctx, getANote, arg.ID, arg.OwnerID)
 	var i GetANoteRow
 	err := row.Scan(
 		&i.ID,
 		&i.Title,
 		&i.Content,
-		&i.UpdatedAt,
+		&i.OwnerID,
 	)
 	return i, err
 }
@@ -94,8 +98,9 @@ Select
      id ,
     title,
     content,
-    updated_at
-From notes
+    updated_at,
+    owner_id
+From notes where owner_id = $1
 `
 
 type GetAllNotesRow struct {
@@ -103,10 +108,11 @@ type GetAllNotesRow struct {
 	Title     string
 	Content   string
 	UpdatedAt time.Time
+	OwnerID   uuid.UUID
 }
 
-func (q *Queries) GetAllNotes(ctx context.Context) ([]GetAllNotesRow, error) {
-	rows, err := q.db.QueryContext(ctx, getAllNotes)
+func (q *Queries) GetAllNotes(ctx context.Context, ownerID uuid.UUID) ([]GetAllNotesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getAllNotes, ownerID)
 	if err != nil {
 		return nil, err
 	}
@@ -119,6 +125,7 @@ func (q *Queries) GetAllNotes(ctx context.Context) ([]GetAllNotesRow, error) {
 			&i.Title,
 			&i.Content,
 			&i.UpdatedAt,
+			&i.OwnerID,
 		); err != nil {
 			return nil, err
 		}
@@ -140,7 +147,7 @@ Set
     title = $2,
     content = $3,
     updated_at = NOW()
-where id = $1
+where id = $1 and owner_id = $4
 returning id, title, content, created_at, updated_at, owner_id
 `
 
@@ -148,10 +155,16 @@ type UpdateNoteParams struct {
 	ID      uuid.UUID
 	Title   string
 	Content string
+	OwnerID uuid.UUID
 }
 
 func (q *Queries) UpdateNote(ctx context.Context, arg UpdateNoteParams) (Note, error) {
-	row := q.db.QueryRowContext(ctx, updateNote, arg.ID, arg.Title, arg.Content)
+	row := q.db.QueryRowContext(ctx, updateNote,
+		arg.ID,
+		arg.Title,
+		arg.Content,
+		arg.OwnerID,
+	)
 	var i Note
 	err := row.Scan(
 		&i.ID,

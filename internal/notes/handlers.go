@@ -23,7 +23,9 @@ func (s *Service) NoteItemHandler(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimSpace(r.PathValue("id"))
 	uuid_id, err := uuid.Parse(id)
 	if id == "" || err != nil {
-		http.Error(w, "couldn't extract id", http.StatusBadRequest)
+		helpers.WriteError(w, http.StatusBadRequest, helpers.ErrorResponse{
+			Error: "couldn't extract id.",
+		})
 		return
 	}
 	switch r.Method {

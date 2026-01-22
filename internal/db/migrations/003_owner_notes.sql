@@ -1,7 +1,7 @@
 -- +goose Up
 
 alter table notes
-add column owner_id UUID references users(id) ON DELETE cascade;
+add column owner_id UUID references users(id) ON DELETE cascade NOT NULL;
 
 -- +goose Down
 

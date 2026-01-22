@@ -16,7 +16,7 @@ type Note struct {
 	Content   string
 	CreatedAt time.Time
 	UpdatedAt time.Time
-	OwnerID   uuid.NullUUID
+	OwnerID   uuid.UUID
 }
 
 type User struct {
