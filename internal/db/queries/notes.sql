@@ -39,3 +39,11 @@ Set
     updated_at = NOW()
 where id = $1 and owner_id = $4
 returning *;
+
+-- name: CheckIfUserOwned :one
+
+Select EXISTS(
+    select 1
+    from notes
+    where id = $1 and owner_id = $2
+);

@@ -57,6 +57,8 @@ func (s *Service) DeleteNoteHandler(w http.ResponseWriter, r *http.Request, id u
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// update
 func (s *Service) UpdateNoteHandler(w http.ResponseWriter, r *http.Request, id uuid.UUID) {
 	user, ok := requestctx.GetUserFromRequest(r)
 	if !ok {
@@ -80,7 +82,14 @@ func (s *Service) UpdateNoteHandler(w http.ResponseWriter, r *http.Request, id u
 		})
 		return
 	}
-	note, err := s.Q.UpdateNote(r.Context(), db.UpdateNoteParams{
+	tx, err := s.DB.BeginTx(r.Context(), nil)
+	if err != nil {
+		helpers.WriteError(w, http.StatusInternalServerError, helpers.ErrorResponse{Error: "internal_server_error"})
+		return
+	}
+	defer tx.Rollback()
+	qtx := s.Q.WithTx(tx)
+	note, err := qtx.UpdateNote(r.Context(), db.UpdateNoteParams{
 		ID:      id,
 		Title:   *req.Title,
 		Content: *req.Content,
@@ -94,6 +103,26 @@ func (s *Service) UpdateNoteHandler(w http.ResponseWriter, r *http.Request, id u
 			return
 		}
 		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	maximum_num, err := qtx.GetCurrentHighestVersion(r.Context(), id)
+	if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	if _, err = qtx.CreateAVersion(r.Context(), db.CreateAVersionParams{
+		NoteID:        note.ID,
+		VersionNumber: maximum_num + 1,
+		Title:         *req.Title,
+		Content:       *req.Content,
+	}); err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	if err = tx.Commit(); err != nil {
+		helpers.WriteError(w, http.StatusInternalServerError, helpers.ErrorResponse{
+			Error: "internal_server_error",
+		})
 		return
 	}
 	helpers.WriteJson(w, http.StatusOK, note)

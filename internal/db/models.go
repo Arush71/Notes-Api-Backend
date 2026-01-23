@@ -26,3 +26,12 @@ type User struct {
 	HashedPassword string
 	Email          string
 }
+
+type VersionedNote struct {
+	Title         string
+	Content       string
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	NoteID        uuid.UUID
+	VersionNumber int32
+}

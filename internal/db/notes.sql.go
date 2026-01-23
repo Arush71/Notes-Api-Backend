@@ -12,6 +12,27 @@ import (
 	"github.com/google/uuid"
 )
 
+const checkIfUserOwned = `-- name: CheckIfUserOwned :one
+
+Select EXISTS(
+    select 1
+    from notes
+    where id = $1 and owner_id = $2
+)
+`
+
+type CheckIfUserOwnedParams struct {
+	ID      uuid.UUID
+	OwnerID uuid.UUID
+}
+
+func (q *Queries) CheckIfUserOwned(ctx context.Context, arg CheckIfUserOwnedParams) (bool, error) {
+	row := q.db.QueryRowContext(ctx, checkIfUserOwned, arg.ID, arg.OwnerID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const createNewNote = `-- name: CreateNewNote :one
 
 Insert into notes (title, content , updated_at , owner_id)
